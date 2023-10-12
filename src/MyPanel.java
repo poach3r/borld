@@ -9,21 +9,23 @@ import javax.swing.*;
 
 public class MyPanel extends JPanel implements ActionListener {
 
+	//declare shit
 	final int PANEL_WIDTH = 512;
 	final int PANEL_HEIGHT = 512;
 	Image player;
 	Image levelImage;
 	Timer timer;
 	KeyHandler keyH = new KeyHandler();
-	int floor[] = new int[520];
-	int xVelocity = 8, yFallVelocity = 8, yJumpVelocity = 4;
+	int floor[] = new int[600];
+	int xVelocity = 8, yFallVelocity = 16, yJumpVelocity = 4;
 	int x = 0, y = 0;
 	int jump = 0;
 	int activeLevel = 0;
 	boolean jumping = false;
+	boolean gameOver = false;
 	int i = 0;
 	int n = 0;
-	int largest = 0;
+	File levelFile;
 	
 	//constructor
 	public MyPanel() {
@@ -52,7 +54,10 @@ public class MyPanel extends JPanel implements ActionListener {
 	public void readLevelData() {
 		try {
 			i = 0;
-			File levelFile = new File("./levels/data/level" + activeLevel + ".txt");
+			if(gameOver == true) 
+				levelFile = new File("./levels/data/gameover.txt");
+			else
+				levelFile = new File("./levels/data/level" + activeLevel + ".txt");
 			Scanner levelReader = new Scanner(levelFile);
 			while (levelReader.hasNextLine()) {
 			  	floor[i] = (levelReader.nextInt());
@@ -71,7 +76,10 @@ public class MyPanel extends JPanel implements ActionListener {
 	//load level image from level(n).png
 	//may eventually replace with a system that draws the level from the level data
 	public void loadLevel() {
-		levelImage = new ImageIcon("./levels/assets/level" + activeLevel + ".png").getImage();
+		if(gameOver == true)
+			levelImage = new ImageIcon("./levels/assets/gameover.png").getImage();
+		else
+			levelImage = new ImageIcon("./levels/assets/level" + activeLevel + ".png").getImage();
 	}
 
 	//movement logic
@@ -79,16 +87,16 @@ public class MyPanel extends JPanel implements ActionListener {
     public void actionPerformed(ActionEvent e) {
 		//jumping logic
 		if(jump > 0) { //if players jump has not ended
-			y -= yJumpVelocity;
+			y -= jump * yJumpVelocity;
 			jump -= 1;
 			jumping = true;
 		}
-		else if(y < PANEL_HEIGHT - (floor[x] > floor[x + player.getHeight(null)]? floor[x]: floor[x + player.getHeight(null)]) - player.getHeight(null)) { //if player is in air and jump has ended
+		else if(y < PANEL_HEIGHT - (floor[x] > floor[x + player.getWidth(null)]? floor[x]: floor[x + player.getWidth(null)]) - player.getHeight(null)) { //if player is in air and jump has ended
 			y += yFallVelocity;
 			jumping = true;
 		}
 		if(keyH.spacePressed == true && jumping == false) //if jumps
-			jump = 16;
+			jump = 8;
 		else
 			jumping = false;
 		
@@ -113,6 +121,15 @@ public class MyPanel extends JPanel implements ActionListener {
 			readLevelData();
 			loadLevel();
 		}
+
+		if(PANEL_HEIGHT - y - player.getHeight(null) == 0) {
+			gameOver = true;
+			x = 256;
+			y = 32;
+			readLevelData();
+			loadLevel();
+		}
+
 		repaint();
     }
 }
