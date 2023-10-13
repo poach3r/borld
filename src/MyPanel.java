@@ -4,7 +4,6 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
-
 import javax.swing.*;
 
 public class MyPanel extends JPanel implements ActionListener {
@@ -13,27 +12,31 @@ public class MyPanel extends JPanel implements ActionListener {
 	final int PANEL_WIDTH = 512;
 	final int PANEL_HEIGHT = 512;
 	Image player;
+	Image enemy;
 	Image levelImage;
 	Timer timer;
 	KeyHandler keyH = new KeyHandler();
 	int floor[] = new int[600];
 	int xVelocity = 8, yFallVelocity = 16, yJumpVelocity = 4;
 	int x = 0, y = 0;
+	int enemyXVelocity = 0;
+	int enemyX = 0, enemyY = 0;
+	int enemyDir = 0;
 	int jump = 0;
-	int activeLevel = 0;
 	boolean jumping = false;
 	boolean gameOver = false;
 	int i = 0;
 	int n = 0;
 	File levelFile;
+	int activeLevel = 0;
+	int lastLevel = 6;
+	int enemyPresent = 0;
 	
 	//constructor
 	public MyPanel() {
 		this.setPreferredSize(new Dimension(PANEL_WIDTH,PANEL_HEIGHT));
-		//this.setBackground(Color.WHITE);
 		player = new ImageIcon("./assets/player.png").getImage();
-		//Thread movement = new Thread(this);
-    	//movement.start();
+		enemy = new ImageIcon("./assets/enemy0.png").getImage();
 		timer = new Timer(16, this);
 		timer.start();
 		this.addKeyListener(keyH);
@@ -48,10 +51,15 @@ public class MyPanel extends JPanel implements ActionListener {
         Graphics2D g2D = (Graphics2D) g;
 		g2D.drawImage(levelImage, 0, 0, null);
         g2D.drawImage(player, x, y, null);
+		g2D.drawImage(enemy, enemyX, enemyY, null);
     }
 
 	//read in level data from level(n).txt
 	public void readLevelData() {
+		enemyPresent = 0;
+		enemyXVelocity = 0;
+		enemyX = 512;
+		enemyY = 0;
 		try {
 			i = 0;
 			if(gameOver == true) 
@@ -59,10 +67,13 @@ public class MyPanel extends JPanel implements ActionListener {
 			else
 				levelFile = new File("./levels/data/level" + activeLevel + ".txt");
 			Scanner levelReader = new Scanner(levelFile);
+			enemyPresent = levelReader.nextInt();
+			System.out.println(enemyPresent);
 			while (levelReader.hasNextLine()) {
 			  	floor[i] = (levelReader.nextInt());
 				for(n = 0; n < 32; n++) //give data to pixels in between tiles
 					floor[i+n] = floor[i];
+				System.out.println(floor[i]);
 				i += 32;
 				n = 0;
 			}
@@ -70,6 +81,23 @@ public class MyPanel extends JPanel implements ActionListener {
 		} catch (FileNotFoundException e) {
 			System.out.println("An error occurred.");
 			e.printStackTrace();
+		}
+		if(enemyPresent == 1) {
+			try {
+				File levelFileEnemy = new File("./levels/data/level" + activeLevel + "Enemy.txt");
+				Scanner levelReaderEnemy = new Scanner(levelFileEnemy);
+				while (levelReaderEnemy.hasNextLine()) {
+					enemyX = levelReaderEnemy.nextInt() - enemy.getWidth(null);
+					enemyY = levelReaderEnemy.nextInt() - enemy.getHeight(null);
+					enemyXVelocity = levelReaderEnemy.nextInt();
+					enemyDir = levelReaderEnemy.nextInt();
+				}
+				enemy = new ImageIcon("./assets/enemy" + enemyDir + ".png").getImage();
+				levelReaderEnemy.close();
+			} catch (FileNotFoundException e) {
+				System.out.println("An error occurred.");
+				e.printStackTrace();
+			}
 		}
 	}
 
@@ -95,6 +123,9 @@ public class MyPanel extends JPanel implements ActionListener {
 			y += yFallVelocity;
 			jumping = true;
 		}
+		if(enemyY < PANEL_HEIGHT - (floor[x] > floor[x + enemy.getWidth(null)]? floor[x]: floor[x + enemy.getWidth(null)]) - enemy.getHeight(null)) { //if player is in air and jump has ended
+			enemyY += yFallVelocity;
+		}
 		if(keyH.spacePressed == true && jumping == false) //if jumps
 			jump = 8;
 		else
@@ -104,32 +135,39 @@ public class MyPanel extends JPanel implements ActionListener {
 		if(keyH.leftPressed == true && PANEL_HEIGHT - y - player.getHeight(null) >= floor[x - 4] && x - 8 != 0 ) {
 			x -= xVelocity;
 		}
-		else if(keyH.leftPressed == true && x - 8 == 0) {
-			x = PANEL_WIDTH - player.getWidth(null);
-			activeLevel -= 1;
-			readLevelData();
-			loadLevel();
+		else if(activeLevel > 0) {
+			if(keyH.leftPressed == true && x - 8 == 0) {
+				x = PANEL_WIDTH - player.getWidth(null);
+				activeLevel -= 1;
+				readLevelData();
+				loadLevel();
+			}
 		}
 		
 		//right logic
 		if(keyH.rightPressed == true && PANEL_HEIGHT - y - player.getHeight(null) >= floor[x + 4 + player.getWidth(null)] && x + 8 != PANEL_WIDTH - player.getWidth(null)) {
 			x += xVelocity;	
 		}
-		else if(keyH.rightPressed == true && x + 8 == PANEL_WIDTH - player.getWidth(null)) {
-			x = 0;
-			activeLevel += 1;
-			readLevelData();
-			loadLevel();
+		else if(activeLevel < lastLevel) {
+			if(keyH.rightPressed == true && x + 8 == PANEL_WIDTH - player.getWidth(null)) {
+				x = 0;
+				activeLevel += 1;
+				readLevelData();
+				loadLevel();
+			}
 		}
 
-		if(PANEL_HEIGHT - y - player.getHeight(null) == 0) {
-			gameOver = true;
-			x = 256;
-			y = 32;
-			readLevelData();
-			loadLevel();
+		//enemy detection
+		if(enemyPresent == 1) {
+			enemyX += enemyXVelocity;
+			if(PANEL_HEIGHT - y - player.getHeight(null) == 0 || (enemyX >= x && enemyX <= x + player.getWidth(null) && enemyY >= y && enemyY <= y + player.getHeight(null)) || (x >= enemyX && x <= enemyX + enemy.getWidth(null) && y >= enemyY && y <= enemyY + enemy.getHeight(null))) {
+				gameOver = true;
+				x = 256;
+				y = 32;
+				readLevelData();
+				loadLevel();
+			}
 		}
-
 		repaint();
     }
 }
