@@ -39,8 +39,9 @@ This folder contains all of the files for a level.
 
 This file contains the collision for the (n) level and is formatted as follows.
 
-L1: Whether the level has an enemy or not (int enemyPresent)
-L2-17: Collision for each tile of the level (int floor[x])
+L1: Whether the level has a roof or not (int roofPresent)
+L2: Whether the level has an enemy or not (int enemyPresent)
+L3-18: Collision for each tile of the level (int floor[x])
 
 ### ./levels/level(n)/level(n)Enemy.txt
 
