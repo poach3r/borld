@@ -19,9 +19,9 @@ public class MyPanel extends JPanel implements ActionListener {
 	int floor[] = new int[600];
 	int xVelocity = 8, yFallVelocity = 16, yJumpVelocity = 4;
 	int x = 0, y = 0;
-	int enemyXVelocity = 0;
+	int enemyXVelocity = 0, enemyYFallVelocity = 16, enemyYJumpVelocity = 0;
 	int enemyX = 0, enemyY = 0;
-	int enemyDir = 0;
+	int enemyImage = 0;
 	int jump = 0;
 	boolean jumping = false;
 	boolean gameOver = false;
@@ -29,7 +29,7 @@ public class MyPanel extends JPanel implements ActionListener {
 	int n = 0;
 	File levelFile;
 	int activeLevel = 0;
-	int lastLevel = 6;
+	int lastLevel = 0;
 	int enemyPresent = 0;
 	
 	//constructor
@@ -41,6 +41,15 @@ public class MyPanel extends JPanel implements ActionListener {
 		timer.start();
 		this.addKeyListener(keyH);
 		this.setFocusable(true);
+		File levelVars = new File("./levels/data/levelVars.txt");
+		try {
+			Scanner varReader = new Scanner(levelVars);
+			activeLevel = varReader.nextInt();
+			lastLevel = varReader.nextInt();
+			varReader.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
 		readLevelData();
 		loadLevel();
 	}
@@ -60,6 +69,8 @@ public class MyPanel extends JPanel implements ActionListener {
 		enemyXVelocity = 0;
 		enemyX = 512;
 		enemyY = 0;
+		enemyYFallVelocity = 16;
+		enemyYJumpVelocity = 0;
 		try {
 			i = 0;
 			if(gameOver == true) 
@@ -82,17 +93,20 @@ public class MyPanel extends JPanel implements ActionListener {
 			System.out.println("An error occurred.");
 			e.printStackTrace();
 		}
+		//read enemy data
 		if(enemyPresent == 1) {
 			try {
 				File levelFileEnemy = new File("./levels/data/level" + activeLevel + "Enemy.txt");
 				Scanner levelReaderEnemy = new Scanner(levelFileEnemy);
 				while (levelReaderEnemy.hasNextLine()) {
 					enemyX = levelReaderEnemy.nextInt() - enemy.getWidth(null);
-					enemyY = levelReaderEnemy.nextInt() - enemy.getHeight(null);
+					enemyY = (PANEL_HEIGHT - levelReaderEnemy.nextInt() - enemy.getHeight(null));
 					enemyXVelocity = levelReaderEnemy.nextInt();
-					enemyDir = levelReaderEnemy.nextInt();
+					enemyYFallVelocity = levelReaderEnemy.nextInt();
+					enemyYJumpVelocity = levelReaderEnemy.nextInt();
+					enemyImage = levelReaderEnemy.nextInt();
 				}
-				enemy = new ImageIcon("./assets/enemy" + enemyDir + ".png").getImage();
+				enemy = new ImageIcon("./assets/enemy" + enemyImage + ".png").getImage();
 				levelReaderEnemy.close();
 			} catch (FileNotFoundException e) {
 				System.out.println("An error occurred.");
@@ -124,7 +138,7 @@ public class MyPanel extends JPanel implements ActionListener {
 			jumping = true;
 		}
 		if(enemyY < PANEL_HEIGHT - (floor[x] > floor[x + enemy.getWidth(null)]? floor[x]: floor[x + enemy.getWidth(null)]) - enemy.getHeight(null)) { //if player is in air and jump has ended
-			enemyY += yFallVelocity;
+			enemyY += enemyYFallVelocity;
 		}
 		if(keyH.spacePressed == true && jumping == false) //if jumps
 			jump = 8;
